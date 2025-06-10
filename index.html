@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Scheduling and Route Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+</head>
+<body>
+    <h1>Bus Scheduling and Route Management System Transport Corporation</h1>
+
+    <div class="container">
+        <h2>Bus Scheduling & Route Management</h2>
+        <input type="text" id="routeName" placeholder="Enter Route Name">
+        <input type="text" id="busNumber" placeholder="Enter Bus Number">
+        <input type="time" id="scheduleTime">
+        <button onclick="addRoute()">Add Route</button>
+
+        <h2>Routes</h2>
+        <table>
+            <thead>
+                <tr><th>Route</th><th>Bus Number</th><th>Time</th><th>Action</th></tr>
+            </thead>
+            <tbody id="routeList"></tbody>
+        </table>
+    </div>
+
+    <div class="container">
+        <h2>Live Bus Tracking</h2>
+        <button onclick="startTracking()">Start Live Tracking</button>
+    </div>
+
+    <div class="container">
+        <h2>Calculate Fare</h2>
+        <input type="text" id="startLocation" placeholder="Start">
+        <input type="text" id="endLocation" placeholder="End">
+        <button onclick="calculateFare()">Get Fare</button>
+        <h3 id="fareOutput"></h3>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
