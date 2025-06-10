@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Scheduling and Route Management System Transport Corporation</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #efa1a0; text-align: center; }
+        .container { max-width: 600px; margin: 20px auto; background: rgb(133, 229, 213); padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); }
+        button { background: #007bff; color: rgb(68, 220, 144); padding: 10px 15px; border: none; cursor: pointer; border-radius: 5px; }
+        button:hover { background: #0056b3; }
+        input { padding: 8px; margin: 5px; width: 40%; border: 1px solid #ccc; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #000000; }
+        th { background: #007bff; color: white; }
+        .delete-btn { background: rgb(171, 106, 106); color: white; padding: 5px 10px; border: none; cursor: pointer; border-radius: 5px; }
+        .delete-btn:hover { background: rgb(0, 0, 0); }
+        #map { height: 500px; width: 100%; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>Bus Scheduling and Route Management System Transport Corporation</h1>
+
+    <div class="container">
+        <h2>Bus Scheduling & Route Management</h2>
+        <input type="text" id="routeName" placeholder="Enter Route Name">
+        <input type="text" id="busNumber" placeholder="Enter Bus Number">
+        <input type="time" id="scheduleTime">
+        <button onclick="addRoute()">Add Route</button>
+
+        <h2>Routes</h2>
+        <table>
+            <thead>
+                <tr><th>Route</th><th>Bus Number</th><th>Time</th><th>Action</th></tr>
+            </thead>
+            <tbody id="routeList"></tbody>
+        </table>
+    </div>
+
+    <div class="container">
+        <h2>Live Bus Tracking</h2>
+        <button onclick="startTracking()">Start Live Tracking</button>
+    </div>
+
+    <div class="container">
+        <h2>Calculate Fare</h2>
+        <input type="text" id="startLocation" placeholder="Start">
+        <input type="text" id="endLocation" placeholder="End">
+        <button onclick="calculateFare()">Get Fare</button>
+        <h3 id="fareOutput"></h3>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", loadRoutes);
+
+        function addRoute() {
+            let routeName = document.getElementById("routeName").value;
+            let busNumber = document.getElementById("busNumber").value;
+            let scheduleTime = document.getElementById("scheduleTime").value;
+
+            if (!routeName || !busNumber || !scheduleTime) {
+                alert("Please fill all fields!");
+                return;
+            }
+
+            let routes = JSON.parse(localStorage.getItem("busRoutes")) || [];
+            routes.push({ routeName, busNumber, scheduleTime });
+            localStorage.setItem("busRoutes", JSON.stringify(routes));
+
+            document.getElementById("routeName").value = "";
+            document.getElementById("busNumber").value = "";
+            document.getElementById("scheduleTime").value = "";
+
+            loadRoutes();
+        }
+
+        function loadRoutes() {
+            let routes = JSON.parse(localStorage.getItem("busRoutes")) || [];
+            let routeList = document.getElementById("routeList");
+
+            routeList.innerHTML = "";
+            routes.forEach((route, index) => {
+                let row = `<tr>
+                    <td>${route.routeName}</td>
+                    <td>${route.busNumber}</td>
+                    <td>${route.scheduleTime}</td>
+                    <td><button class="delete-btn" onclick="deleteRoute(${index})">Delete</button></td>
+                </tr>`;
+                routeList.innerHTML += row;
+            });
+        }
+
+        function deleteRoute(index) {
+            let routes = JSON.parse(localStorage.getItem("busRoutes")) || [];
+            routes.splice(index, 1);
+            localStorage.setItem("busRoutes", JSON.stringify(routes));
+            loadRoutes();
+        }
+
+        var map = L.map('map').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+
+        var busMarker;
+        var busRoute = L.polyline([], { color: 'blue' }).addTo(map);
+        var predefinedRoute = [
+            [28.7041, 77.1025], 
+            [28.5355, 77.3910], 
+            [28.4595, 77.0266], 
+            [28.7041, 77.1025]  
+        ];
+        var routePolyline = L.polyline(predefinedRoute, { color: 'red' }).addTo(map);
+        map.fitBounds(routePolyline.getBounds());
+
+        function startTracking() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser");
+                return;
+            }
+
+            alert("Tracking Started! Allow location access.");
+
+            navigator.geolocation.watchPosition(
+                function (position) {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+
+                    if (busMarker) {
+                        busMarker.setLatLng([lat, lng]);
+                    } else {
+                        busMarker = L.marker([lat, lng]).addTo(map).bindPopup("Bus is Here!");
+                    }
+
+                    busRoute.addLatLng([lat, lng]);
+                    map.setView([lat, lng], 15);
+                },
+                function () {
+                    alert("Unable to retrieve location.");
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        function calculateFare() {
+            let startInput = document.getElementById("startLocation").value;
+            let endInput = document.getElementById("endLocation").value;
+
+            if (!startInput || !endInput) {
+                alert("Please enter both start and end locations!");
+                return;
+            }
+
+            let startCoords = startInput.split(",").map(Number);
+            let endCoords = endInput.split(",").map(Number);
+
+            let distance = getDistance(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
+            let fare = (distance * 10).toFixed(2);
+
+            document.getElementById("fareOutput").innerHTML = `Fare: ₹${fare} (Based on ${distance.toFixed(2)} km)`;
+        }
+
+        function getDistance(lat1, lon1, lat2, lon2) {
+            function toRad(value) { return value * Math.PI / 180; }
+            let R = 6371;
+            let dLat = toRad(lat2 - lat1);
+            let dLon = toRad(lon2 - lon1);
+            let a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+    </script>
+
+</body>
+</html>
